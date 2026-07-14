@@ -1,0 +1,61 @@
+import type { ProjectStory } from "./types";
+import { newStoryItem } from "./types";
+
+/** Visual sample for landing/template previews only — never listed as a user project. */
+export const PREVIEW_STORY: ProjectStory = {
+  id: "preview",
+  name: "HomeHub",
+  description: "A restaurant inventory platform for tracking stock, waste, and purchasing.",
+  emoji: "◆",
+  accent: "#fafafa",
+  languages: ["TypeScript", "CSS"],
+  technologies: ["TypeScript", "Next.js", "Supabase"],
+  topics: ["inventory", "nextjs", "supabase"],
+  homepage: "https://example.com",
+  activityStatus: "active",
+  stars: 0,
+  forks: 0,
+  commits: 84,
+  weeks: 6,
+  contributors: 1,
+  releases: 2,
+  status: "generated",
+  updatedAt: new Date().toISOString(),
+  pushedAt: new Date().toISOString(),
+  template: "dark",
+  carousel: {
+    tagline: "A restaurant inventory platform for tracking stock, waste, and purchasing.",
+    homepage: "https://example.com",
+    activityStatus: "active",
+    features: [
+      newStoryItem("Authentication and onboarding", "detected"),
+      newStoryItem("Inventory tracking", "detected"),
+      newStoryItem("Supplier management", "suggested"),
+      newStoryItem("Admin dashboard", "detected"),
+      newStoryItem("Theme persistence", "custom"),
+      newStoryItem("Responsive application shell", "detected"),
+    ],
+    engineering: [
+      newStoryItem("Role-based access control", "detected"),
+      newStoryItem("Row-level database security", "detected"),
+      newStoryItem("Server-side authentication", "detected"),
+      newStoryItem("Reusable component architecture", "detected"),
+      newStoryItem("Automated deployment workflow", "detected"),
+    ],
+    shipped: [
+      newStoryItem("Production deployment completed", "suggested"),
+      newStoryItem("Authentication and core workflows functional", "suggested"),
+      newStoryItem("Automated checks passing", "detected"),
+      newStoryItem("Last meaningful update: July 2026", "detected"),
+    ],
+    periodLabel: "Built over 6 weeks · 2 releases",
+    latestRelease: "v1.2.0",
+    githubUrl: "https://github.com",
+    links: [
+      { label: "View Demo", url: "https://example.com" },
+      { label: "GitHub", url: "https://github.com" },
+    ],
+    proofLink: null,
+    proofImage: null,
+  },
+};

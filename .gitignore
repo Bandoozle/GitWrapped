@@ -32,6 +32,13 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# shared story persistence (local)
+.data/
+
+# font scratch
+public/fonts-temp/
 
 # vercel
 .vercel

@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GitWrapped
 
-## Getting Started
+Turn any GitHub repository into a beautiful, shareable **carousel** for LinkedIn, X, portfolios, and resumes.
 
-First, run the development server:
+## Features
+
+- **GitHub import** via OAuth → recruiter-ready 4-card carousel (project, features, engineering, shipped)
+- **Shareable live link** at `/s/[id]` — no download required to view
+- PNG export still available for LinkedIn uploads
+
+## Setup
+
+```bash
+cd code-story
+npm install
+cp .env.example .env.local
+```
+
+### 1. Auth secret
+
+In `.env.local`:
+
+```env
+AUTH_SECRET=<run: openssl rand -base64 32>
+AUTH_URL=http://localhost:3000
+```
+
+### 2. GitHub OAuth
+
+1. Create an OAuth App at [GitHub Developer Settings](https://github.com/settings/developers)
+2. **Homepage URL:** `http://localhost:3000`
+3. **Authorization callback URL:** `http://localhost:3000/api/auth/callback/github`
+4. Copy Client ID + Secret into `.env.local`:
+
+```env
+AUTH_GITHUB_ID=...
+AUTH_GITHUB_SECRET=...
+```
+
+### 3. Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Flow
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Sign in with GitHub
+2. New Story → pick a repo → import
+3. Template → edit features / engineering / shipped proof
+4. **Copy share link** → anyone opens `/s/abc123` and browses the carousel
+5. Optional: download PNGs
 
-## Learn More
+## Notes
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Shared stories are stored under `.data/shares/` locally (gitignored).
+- For production on Vercel, persistent blob/DB storage should replace the file store.
+- Cards distinguish detected GitHub signals, system suggestions, and your edits.
