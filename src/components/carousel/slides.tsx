@@ -491,7 +491,7 @@ export function ProjectSlide({ story, format }: SlideProps) {
       <img
         src={proofImage!}
         alt="Project screenshot"
-        className="h-full w-full object-cover object-top"
+        className="absolute inset-0 h-full w-full object-cover object-top"
       />
       {mediaHref ? (
         <a
@@ -528,19 +528,15 @@ export function ProjectSlide({ story, format }: SlideProps) {
       {header}
       {heading}
       {body}
-      {withMedia
-        ? mediaFrame(
-            cn(
-              "w-full shrink-0 rounded-2xl aspect-video",
-              // Pin to bottom; pt keeps a fixed gap from content above (don't use mt-* with mt-auto)
-              landscape ? "mt-4 max-w-[58%]" : "mt-auto pt-6",
-            ),
-            {
-              borderColor: theme.border,
-              backgroundColor: hexAlpha(theme.text, 0.06),
-            },
-          )
-        : null}
+      {withMedia ? (
+        // Spacing lives on the wrapper so the image frame stays flush edge-to-edge
+        <div className={cn("w-full", landscape ? "mt-4 max-w-[58%]" : "mt-auto pt-6")}>
+          {mediaFrame("aspect-video w-full shrink-0 rounded-2xl", {
+            borderColor: theme.border,
+            backgroundColor: hexAlpha(theme.text, 0.06),
+          })}
+        </div>
+      ) : null}
     </Shell>
   );
 }
