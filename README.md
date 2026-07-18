@@ -35,7 +35,7 @@ AUTH_GITHUB_ID=...
 AUTH_GITHUB_SECRET=...
 ```
 
-Scopes requested: `read:user user:email` only (public repos via the public API — no `repo`, `public_repo`, or org scopes).
+Scopes requested: none beyond public identity (empty OAuth scope — no `user:email`, `read:user`, `repo`, `public_repo`, or org scopes).
 
 ### 3. Run
 

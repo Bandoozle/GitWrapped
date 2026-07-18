@@ -14,7 +14,9 @@ const providers = isGitHubAuthConfigured()
         clientSecret: process.env.AUTH_GITHUB_SECRET!,
         authorization: {
           params: {
-            scope: "read:user user:email",
+            // No repo/org scopes. Empty scopes = public identity + public API only.
+            // Cards/import do not need email or private profile data.
+            scope: "",
           },
         },
       }),

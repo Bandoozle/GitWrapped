@@ -19,9 +19,9 @@ export default function LoginPage() {
           Connect GitHub
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-pretty text-muted">
-          GitWrapped uses GitHub sign-in to verify your account and import public
-          repository data. It does not request access to private repositories or
-          organizations.
+          GitWrapped uses GitHub sign-in only to verify your account and read public
+          repository data. It does not request email, private profile data, private
+          repositories, or organization access.
         </p>
         <Button
           size="lg"

@@ -43,10 +43,10 @@ export default function SettingsPage() {
                 . Only your public repositories can be imported.
               </p>
               <p className="mt-3 text-sm leading-relaxed text-muted">
-                GitWrapped uses GitHub sign-in to verify your account and import public
-                repository data. It does not request access to private repositories or
-                organizations. If you previously granted broader access, disconnect and
-                sign in again to refresh permissions.
+                GitWrapped uses GitHub sign-in only to verify your account and read public
+                repository data. It does not request email, private profile data, private
+                repositories, or organization access. If you previously granted broader
+                access, disconnect and sign in again to refresh permissions.
               </p>
               <Button
                 variant="secondary"
@@ -59,9 +59,9 @@ export default function SettingsPage() {
           ) : (
             <>
               <p className="mt-2 text-sm text-muted">
-                GitWrapped uses GitHub sign-in to verify your account and import public
-                repository data. It does not request access to private repositories or
-                organizations.
+                GitWrapped uses GitHub sign-in only to verify your account and read public
+                repository data. It does not request email, private profile data, private
+                repositories, or organization access.
               </p>
               <Button
                 onClick={() => signIn("github", { callbackUrl: "/settings" })}
