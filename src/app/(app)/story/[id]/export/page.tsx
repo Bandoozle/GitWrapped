@@ -1,33 +1,34 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toPng } from "html-to-image";
 import { Check, Copy, Download, ChevronLeft, ChevronRight, Link2 } from "lucide-react";
-import { getProject, upsertProject } from "@/lib/story-store";
-import { EXPORT_SIZES, type ExportFormat, type ProjectStory } from "@/lib/types";
+import { upsertProject, useProject } from "@/lib/story-store";
+import { EXPORT_SIZES, type ExportFormat } from "@/lib/types";
 import { SLIDE_COMPONENTS } from "@/components/carousel/slides";
 import { cn } from "@/lib/utils";
+import { Button, buttonClass } from "@/components/ui/button";
 
 export default function ExportPage() {
   const params = useParams<{ id: string }>();
-  const [story, setStory] = useState<ProjectStory | null>(null);
+  const story = useProject(params.id);
   const [format, setFormat] = useState<ExportFormat>("linkedin-portrait");
   const [slideIndex, setSlideIndex] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
   const slideRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const project = getProject(params.id) ?? null;
-    setStory(project);
-    if (project?.shareId && typeof window !== "undefined") {
-      setShareUrl(`${window.location.origin}/s/${project.shareId}`);
-    }
-  }, [params.id]);
+  // Derived from the store so a freshly created share id shows up automatically.
+  const shareUrl = useMemo(
+    () =>
+      story?.shareId && typeof window !== "undefined"
+        ? `${window.location.origin}/s/${story.shareId}`
+        : null,
+    [story?.shareId],
+  );
 
   const size = EXPORT_SIZES.find((s) => s.id === format)!;
 
@@ -44,10 +45,7 @@ export default function ExportPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create share link");
       const url = data.url as string;
-      const next = { ...story, shareId: data.id as string };
-      upsertProject(next);
-      setStory(next);
-      setShareUrl(url);
+      upsertProject({ ...story, shareId: data.id as string });
       return url;
     } finally {
       setSharing(false);
@@ -55,11 +53,16 @@ export default function ExportPage() {
   }
 
   async function copyShareLink() {
-    const url = await ensureShareLink();
-    if (!url) return;
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
+    try {
+      const url = await ensureShareLink();
+      if (!url) return;
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not create share link";
+      window.alert(message);
+    }
   }
 
   async function downloadSlide(index: number) {
@@ -117,11 +120,20 @@ export default function ExportPage() {
     setBusy(false);
   }
 
+  if (story === null) {
+    return <p className="py-16 text-center text-sm text-muted" role="status">Loading…</p>;
+  }
+
   if (!story) {
     return (
-      <div>
-        <p className="text-muted">Story not found.</p>
-        <Link href="/dashboard" className="mt-4 inline-block text-foreground">
+      <div className="mx-auto max-w-md py-16 text-center">
+        <h1 className="font-display text-2xl tracking-tight text-foreground">
+          Story not found
+        </h1>
+        <p className="mt-2 text-sm text-muted">
+          It may have been removed or created on another device.
+        </p>
+        <Link href="/dashboard" className={buttonClass("secondary", "md", "mt-6")}>
           Back to projects
         </Link>
       </div>
@@ -135,48 +147,54 @@ export default function ExportPage() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-foreground">Share & export</p>
-          <h1 className="mt-2 font-display text-4xl tracking-tight text-foreground">
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">Share &amp; export</p>
+          <h1 className="mt-2 font-display text-4xl tracking-tight text-balance text-foreground">
             {story.name} carousel
           </h1>
-          <p className="mt-2 text-muted">
+          <p className="mt-2 text-pretty text-muted">
             Share a live link — or download PNGs for LinkedIn uploads.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
+          <Button
             disabled={sharing}
+            aria-busy={sharing}
             onClick={() => void copyShareLink()}
-            className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2.5 text-sm font-medium !text-black disabled:opacity-50"
           >
-            {copied ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+            {copied ? (
+              <Check className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <Link2 className="h-4 w-4" aria-hidden="true" />
+            )}
             {sharing ? "Creating link…" : copied ? "Copied!" : "Copy share link"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
             disabled={busy}
+            aria-busy={busy}
             onClick={() => void downloadAll()}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2.5 text-sm font-medium disabled:opacity-50"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-4 w-4" aria-hidden="true" />
             {busy ? "Exporting…" : "Download PNGs"}
-          </button>
+          </Button>
         </div>
       </div>
 
       {shareUrl && (
         <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm">
           <span className="text-muted">Live carousel</span>
-          <a href={shareUrl} className="break-all font-mono text-foreground hover:underline">
+          <a
+            href={shareUrl}
+            className="break-all font-mono text-foreground underline-offset-4 hover:underline"
+          >
             {shareUrl}
           </a>
           <button
             type="button"
             onClick={() => void copyShareLink()}
-            className="ml-auto inline-flex items-center gap-1 text-muted hover:text-foreground"
+            className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-muted transition-colors hover:text-foreground active:scale-[0.97]"
           >
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
             Copy
           </button>
         </div>
@@ -191,16 +209,17 @@ export default function ExportPage() {
                 <button
                   key={option.id}
                   type="button"
+                  aria-pressed={format === option.id}
                   onClick={() => setFormat(option.id)}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-sm transition",
+                    "flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-sm transition-colors duration-150 ease-out active:scale-[0.99]",
                     format === option.id
                       ? "border-white bg-white/10"
                       : "border-border bg-surface hover:border-white/30",
                   )}
                 >
                   <span>{option.label}</span>
-                  <span className="font-mono text-xs text-muted">
+                  <span className="font-mono text-xs tabular-nums text-muted">
                     {option.width}×{option.height}
                   </span>
                 </button>
@@ -215,24 +234,30 @@ export default function ExportPage() {
                 <div
                   key={slide.id}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm",
-                    slideIndex === i ? "bg-white !text-black" : "hover:bg-surface",
+                    "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors duration-150 ease-out",
+                    slideIndex === i ? "bg-white text-black" : "hover:bg-surface",
                   )}
                 >
                   <button
                     type="button"
+                    aria-current={slideIndex === i ? "true" : undefined}
                     onClick={() => setSlideIndex(i)}
-                    className="flex-1 text-left"
+                    className="flex-1 text-left tabular-nums"
                   >
                     {i + 1}. {slide.label}
                   </button>
                   <button
                     type="button"
                     onClick={() => void downloadSlide(i)}
-                    className="rounded p-1 text-muted hover:text-foreground"
+                    className={cn(
+                      "rounded p-1 transition-colors active:scale-[0.97]",
+                      slideIndex === i
+                        ? "text-black/60 hover:text-black"
+                        : "text-muted hover:text-foreground",
+                    )}
                     aria-label={`Download slide ${i + 1}`}
                   >
-                    <Download className="h-3.5 w-3.5" />
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 </div>
               ))}
@@ -245,13 +270,13 @@ export default function ExportPage() {
             <button
               type="button"
               onClick={() => setSlideIndex((i) => Math.max(0, i - 1))}
-              className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-sm text-muted transition-colors hover:text-foreground active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
               disabled={slideIndex === 0}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               Prev
             </button>
-            <span className="font-mono text-xs text-muted">
+            <span className="font-mono text-xs tabular-nums text-muted">
               Slide {slideIndex + 1} / {SLIDE_COMPONENTS.length}
             </span>
             <button
@@ -259,11 +284,11 @@ export default function ExportPage() {
               onClick={() =>
                 setSlideIndex((i) => Math.min(SLIDE_COMPONENTS.length - 1, i + 1))
               }
-              className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-sm text-muted transition-colors hover:text-foreground active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
               disabled={slideIndex === SLIDE_COMPONENTS.length - 1}
             >
               Next
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
 
@@ -285,7 +310,7 @@ export default function ExportPage() {
                 }}
               >
                 <div className="h-full w-full [&_>div]:h-full [&_>div]:aspect-auto">
-                  <Active story={story} />
+                  <Active story={story} format={format} />
                 </div>
               </div>
             </div>

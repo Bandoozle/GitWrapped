@@ -7,10 +7,17 @@
   --surface: #0c0c0e;
   --surface-2: #18181b;
   --border: rgba(255, 255, 255, 0.1);
-  --accent: #fafafa;
-  --accent-soft: rgba(255, 255, 255, 0.08);
+  /* Brand lime — used by demo, CTAs, and interactive accents */
+  --accent: #a3e635;
+  --accent-hover: #bef264;
+  --accent-soft: rgba(163, 230, 53, 0.14);
+  --accent-muted: rgba(163, 230, 53, 0.35);
+  --accent-fg: #0a0a0c;
   --ink: #fafafa;
+  --ring: rgba(163, 230, 53, 0.75);
   --ease-apple: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 @theme inline {
@@ -21,7 +28,10 @@
   --color-surface-2: var(--surface-2);
   --color-border: var(--border);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-muted: var(--accent-muted);
+  --color-accent-fg: var(--accent-fg);
   --color-ink: var(--ink);
   --font-sans: var(--font-body);
   --font-display: var(--font-display);
@@ -42,6 +52,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-body), ui-sans-serif, sans-serif;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body::before {
@@ -53,8 +66,36 @@ a {
 }
 
 ::selection {
-  background: #fafafa;
-  color: #09090b;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* Visible keyboard focus for every interactive element.
+   focus-visible only triggers for keyboard/programmatic focus, so mouse
+   clicks stay clean while keyboard users always get a clear indicator. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .font-display {

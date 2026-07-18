@@ -20,7 +20,23 @@ const KNOWN = [
   "Firebase",
   "Swift",
   "Kotlin",
+  "Gemini API",
+  "OpenAI",
 ] as const;
+
+/** Metadata languages — fine as supporting detail, not the main stack story. */
+const SUPPORT_ONLY = new Set([
+  "html",
+  "css",
+  "scss",
+  "less",
+  "batchfile",
+  "shell",
+  "makefile",
+  "dockerfile",
+  "powershell",
+  "procfile",
+]);
 
 export function detectTechnologies(
   languages: string[],
@@ -30,6 +46,7 @@ export function detectTechnologies(
   const found = new Set<string>();
 
   for (const lang of languages) {
+    if (SUPPORT_ONLY.has(lang.toLowerCase())) continue;
     if (lang === "TSX" || lang === "TypeScript") found.add("TypeScript");
     else if (lang === "JavaScript" || lang === "JSX") found.add("JavaScript");
     else if (KNOWN.includes(lang as (typeof KNOWN)[number])) found.add(lang);
@@ -47,11 +64,14 @@ export function detectTechnologies(
     [/graphql/, "GraphQL"],
     [/firebase/, "Firebase"],
     [/docker/, "Docker"],
+    [/gemini/, "Gemini API"],
+    [/openai/, "OpenAI"],
   ];
 
   for (const [re, label] of hints) {
     if (re.test(text)) found.add(label);
   }
 
-  return [...found].slice(0, 8);
+  // Prefer meaningful stack over raw language dump.
+  return [...found];
 }

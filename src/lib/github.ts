@@ -1,6 +1,10 @@
 import type { ActivityStatus, ProjectStory, RepoOption, StoryLink } from "./types";
+import { defaultStatusLabel } from "./types";
 import { detectTechnologies } from "./tech-detect";
 import {
+  buildArchitectureFlow,
+  buildEvidence,
+  buildPeriodLabel,
   buildShippedPoints,
   detectEngineering,
   featuresFromCommits,
@@ -8,6 +12,21 @@ import {
 } from "./github-signals";
 
 const GITHUB_API = "https://api.github.com";
+
+/** Languages that are usually supporting metadata, not the project story. */
+const SUPPORT_ONLY_LANGS = new Set([
+  "html",
+  "css",
+  "scss",
+  "less",
+  "batchfile",
+  "shell",
+  "makefile",
+  "dockerfile",
+  "procfile",
+  "powershell",
+]);
+
 
 type GhRepo = {
   id: number;
@@ -129,23 +148,28 @@ export async function importRepoStory(
     fetchPackageJson(owner, repo, token),
   ]);
 
-  const languageNames = Object.keys(languages);
+  const languageNames = Object.keys(languages).filter(
+    (l) => !SUPPORT_ONLY_LANGS.has(l.toLowerCase()),
+  );
+  const allLanguageNames = Object.keys(languages);
   const technologies = detectTechnologies(
-    languageNames,
-    `${meta.description ?? ""} ${(meta.topics ?? []).join(" ")} ${packageJson}`,
+    languageNames.length ? languageNames : allLanguageNames,
+    `${meta.description ?? ""} ${(meta.topics ?? []).join(" ")} ${packageJson} ${readmeRaw.slice(0, 2000)}`,
   );
   const weeks = estimateWeeks(commits);
   const commitCount = commits.length;
   const activityStatus = deriveActivityStatus(meta);
   const homepage = normalizeUrl(meta.homepage);
   const latestRelease = releases[0]?.tag_name ?? null;
+  const releasePublishedAt = releases[0]?.published_at ?? null;
+  const contributorCount = contributors.length || 1;
 
   const readmeFeatures = featuresFromReadme(readmeRaw);
   const commitFeatures = featuresFromCommits(commits.map((c) => c.commit.message));
   const features =
-    readmeFeatures.length >= 3
-      ? readmeFeatures
-      : uniqueItems([...readmeFeatures, ...commitFeatures]).slice(0, 8);
+    readmeFeatures.length >= 2
+      ? readmeFeatures.slice(0, 4)
+      : uniqueItems([...readmeFeatures, ...commitFeatures]).slice(0, 4);
 
   const engineering = detectEngineering({
     tree,
@@ -154,7 +178,28 @@ export async function importRepoStory(
   });
 
   const hasWorkflows = tree.some((t) => t.path.startsWith(".github/workflows/"));
-  const hasTests = engineering.some((e) => e.text === "Automated tests");
+  const hasTests = engineering.some((e) => /test/i.test(e.text));
+  const hasApi = tree.some((t) =>
+    /\/(api|routes|controllers|handlers)\//.test(t.path) ||
+    t.path.includes("app/api/") ||
+    t.path.includes("pages/api/"),
+  );
+
+  const architectureFlow = buildArchitectureFlow({
+    tree,
+    packageJson,
+    readme: readmeRaw,
+    technologies,
+  });
+
+  const evidence = buildEvidence({
+    tree,
+    packageJson,
+    hasWorkflows,
+    hasTests,
+    contributors: contributorCount,
+    hasApi,
+  });
 
   const shipped = buildShippedPoints({
     homepage,
@@ -163,20 +208,31 @@ export async function importRepoStory(
     hasTests,
     pushedAt: meta.pushed_at,
     featureCount: features.length,
+    releasePublishedAt,
   });
 
-  const periodParts: string[] = [];
-  if (weeks > 0) periodParts.push(`Built over ${weeks} week${weeks === 1 ? "" : "s"}`);
-  if (releases.length > 0) {
-    periodParts.push(`${releases.length} release${releases.length === 1 ? "" : "s"}`);
-  }
-  const periodLabel = periodParts.join(" · ");
+  const periodLabel = buildPeriodLabel({
+    latestRelease,
+    releasePublishedAt,
+    homepage,
+    activityStatus,
+  });
+
+  const statusLabel = defaultStatusLabel(activityStatus, homepage);
 
   const links: StoryLink[] = [];
   if (homepage) links.push({ label: "View Demo", url: homepage });
   links.push({ label: "GitHub", url: meta.html_url });
 
-  const tagline = meta.description || `A project built with ${technologies.slice(0, 2).join(" & ") || "care"}.`;
+  const tagline =
+    meta.description ||
+    `A project built with ${technologies.slice(0, 2).join(" & ") || "care"}.`;
+
+  // Role is owner-edited when known; suggest a light default from team size.
+  const role =
+    contributorCount > 1
+      ? `Contributor on a ${contributorCount}-person project`
+      : "Solo developer";
 
   return {
     id: String(meta.id),
@@ -184,7 +240,9 @@ export async function importRepoStory(
     description: tagline,
     emoji: "◆",
     accent: "#fafafa",
-    languages: languageNames.length ? languageNames : [meta.language || "Unknown"],
+    languages: allLanguageNames.length
+      ? allLanguageNames
+      : [meta.language || "Unknown"],
     technologies,
     topics: meta.topics ?? [],
     homepage,
@@ -193,7 +251,7 @@ export async function importRepoStory(
     forks: meta.forks_count,
     commits: commitCount,
     weeks,
-    contributors: contributors.length || 1,
+    contributors: contributorCount,
     releases: releases.length,
     status: "generated",
     updatedAt: new Date().toISOString(),
@@ -203,11 +261,17 @@ export async function importRepoStory(
       tagline,
       homepage,
       activityStatus,
+      statusLabel,
+      role,
+      teamSize: contributorCount,
       features,
+      architectureFlow,
       engineering,
+      evidence,
       shipped,
       periodLabel,
       latestRelease,
+      impact: null,
       githubUrl: meta.html_url,
       links,
       proofLink: homepage,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
+import { Button } from "@/components/ui/button";
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -16,7 +17,9 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-xl">
-      <h1 className="font-display text-4xl tracking-tight text-foreground">Settings</h1>
+      <h1 className="font-display text-4xl tracking-tight text-balance text-foreground">
+        Settings
+      </h1>
       <p className="mt-2 text-muted">GitHub connection and sharing defaults.</p>
 
       <div className="mt-10 space-y-8">
@@ -39,26 +42,25 @@ export default function SettingsPage() {
                 </span>
                 . Private and public repos can be imported.
               </p>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => signOut({ callbackUrl: "/settings" })}
-                className="mt-4 rounded-md border border-border bg-surface px-4 py-2.5 text-sm"
+                className="mt-4"
               >
                 Disconnect
-              </button>
+              </Button>
             </>
           ) : (
             <>
               <p className="mt-2 text-sm text-muted">
                 Connect GitHub to import real repositories and commit history.
               </p>
-              <button
-                type="button"
+              <Button
                 onClick={() => signIn("github", { callbackUrl: "/settings" })}
-                className="mt-4 rounded-md bg-white px-4 py-2.5 text-sm font-medium !text-black"
+                className="mt-4"
               >
                 Sign in with GitHub
-              </button>
+              </Button>
             </>
           )}
         </section>
@@ -75,7 +77,7 @@ export default function SettingsPage() {
         <section className="border-t border-border pt-8">
           <h2 className="font-display text-lg tracking-tight">Export defaults</h2>
           <p className="mt-2 text-sm text-muted">
-            Preferred PNG size: LinkedIn Square (1200×1200). Change per export anytime.
+            Preferred PNG size: LinkedIn Portrait (1080×1350). Change per export anytime.
           </p>
         </section>
       </div>

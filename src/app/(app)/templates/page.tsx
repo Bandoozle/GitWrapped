@@ -8,7 +8,9 @@ import { PREVIEW_STORY } from "@/lib/preview-story";
 export default function TemplatesPage() {
   return (
     <div>
-      <h1 className="text-3xl font-medium tracking-tight text-foreground">Templates</h1>
+      <h1 className="font-display text-4xl tracking-tight text-balance text-foreground">
+        Templates
+      </h1>
       <p className="mt-2 text-muted">Three looks. Pick one when you generate.</p>
 
       <div className="mt-10 grid gap-6 sm:grid-cols-3">

@@ -20,6 +20,8 @@ export interface StoryItem {
   id: string;
   text: string;
   source: FieldSource;
+  /** Optional short provenance shown in the editor. */
+  basis?: string | null;
 }
 
 export type ActivityStatus = "active" | "recent" | "archived" | "inactive";
@@ -30,25 +32,44 @@ export interface StoryLink {
 }
 
 export interface StoryCarousel {
-  /** Short project pitch (repo description). */
+  /** Short project pitch (repo description / problem + solution). */
   tagline: string;
   homepage: string | null;
   activityStatus: ActivityStatus;
-  /** Card 2 — what was delivered. */
+  /** Human status line, e.g. "Working prototype". */
+  statusLabel: string;
+  /** Optional role line, e.g. "Full-stack and AI development". */
+  role: string | null;
+  /** Contributors count when known. */
+  teamSize: number | null;
+  /** Card 2 — up to ~4 product capabilities. */
   features: StoryItem[];
-  /** Card 3 — engineering depth signals. */
+  /**
+   * Card 3 — How It Works architecture flow steps,
+   * e.g. ["Live transcript", "Relevance filter", "AI processing"].
+   */
+  architectureFlow: string[];
+  /** Card 3 — evidence-backed engineering highlights (max ~4 shown). */
   engineering: StoryItem[];
-  /** Card 4 — proof it ships. */
+  /** Card 3 — small evidence chips, e.g. "Tests detected · CI configured". */
+  evidence: string[];
+  /** Card 4 — What It Achieved delivery milestones. */
   shipped: StoryItem[];
-  /** Supporting context, e.g. "Built over 6 weeks · 2 releases". */
+  /**
+   * Supporting context — prefer release wording over "last updated",
+   * e.g. "Stable prototype · Last release October 2025".
+   */
   periodLabel: string;
   latestRelease: string | null;
+  /**
+   * Optional owner-edited outcome. Never auto-generated.
+   * Shown prominently on What It Achieved when present.
+   * e.g. "Tested with 12 users".
+   */
+  impact: string | null;
   githubUrl: string;
   links: StoryLink[];
-  /**
-   * Optional proof media on the Shipped card — paste a link or image URL,
-   * or upload/paste an image (stored as a data URL).
-   */
+  /** Optional project media on Snapshot — demo link (opens from image) and/or screenshot. */
   proofLink: string | null;
   proofImage: string | null;
 }
@@ -60,7 +81,7 @@ export interface ProjectStory {
   emoji: string;
   accent: string;
   languages: string[];
-  /** Stack shown as supporting text on Project card. */
+  /** Stack shown on Project card as icon pills. */
   technologies: string[];
   topics: string[];
   homepage: string | null;
@@ -95,8 +116,8 @@ export interface RepoOption {
 
 export const EXPORT_SIZES: ExportSize[] = [
   { id: "linkedin-portrait", label: "LinkedIn Portrait", width: 1080, height: 1350 },
-  { id: "linkedin-square", label: "LinkedIn Square", width: 1200, height: 1200 },
-  { id: "instagram", label: "Instagram", width: 1080, height: 1080 },
+  { id: "linkedin-square", label: "LinkedIn Square", width: 1080, height: 1080 },
+  { id: "instagram", label: "Instagram", width: 1080, height: 1350 },
   { id: "twitter", label: "Twitter / X", width: 1600, height: 900 },
 ];
 
@@ -111,22 +132,73 @@ export const TEMPLATES: {
 ];
 
 export const ACTIVITY_LABELS: Record<ActivityStatus, string> = {
-  active: "Active",
+  active: "Active development",
   recent: "Recently updated",
   archived: "Archived",
   inactive: "Inactive",
 };
 
 export const SOURCE_LABELS: Record<FieldSource, string> = {
-  detected: "Detected",
+  detected: "Detected from GitHub",
   suggested: "Suggested",
   custom: "Added by you",
 };
 
-export function newStoryItem(text: string, source: FieldSource = "custom"): StoryItem {
+export function newStoryItem(
+  text: string,
+  source: FieldSource = "custom",
+  basis?: string | null,
+): StoryItem {
   return {
     id: `item-${Math.random().toString(36).slice(2, 10)}`,
     text,
     source,
+    basis: basis ?? null,
   };
+}
+
+/** Fill missing carousel fields for stories saved before the What It Achieved schema. */
+export function normalizeCarousel(
+  carousel: Partial<StoryCarousel> &
+    Pick<StoryCarousel, "tagline" | "features" | "engineering" | "shipped" | "githubUrl" | "links">,
+  fallbacks?: {
+    activityStatus?: ActivityStatus;
+    contributors?: number;
+    homepage?: string | null;
+  },
+): StoryCarousel {
+  const activityStatus = carousel.activityStatus ?? fallbacks?.activityStatus ?? "active";
+  return {
+    tagline: carousel.tagline,
+    homepage: carousel.homepage ?? fallbacks?.homepage ?? null,
+    activityStatus,
+    statusLabel: carousel.statusLabel ?? defaultStatusLabel(activityStatus, carousel.homepage ?? null),
+    role: carousel.role ?? null,
+    teamSize: carousel.teamSize ?? fallbacks?.contributors ?? null,
+    features: carousel.features ?? [],
+    architectureFlow: carousel.architectureFlow?.length
+      ? carousel.architectureFlow
+      : ["Input", "Processing", "Output", "Interface"],
+    engineering: carousel.engineering ?? [],
+    evidence: carousel.evidence ?? [],
+    shipped: carousel.shipped ?? [],
+    periodLabel: carousel.periodLabel ?? "",
+    latestRelease: carousel.latestRelease ?? null,
+    impact: carousel.impact ?? null,
+    githubUrl: carousel.githubUrl,
+    links: carousel.links ?? [],
+    proofLink: carousel.proofLink ?? null,
+    proofImage: carousel.proofImage ?? null,
+  };
+}
+
+export function defaultStatusLabel(
+  activity: ActivityStatus,
+  homepage: string | null,
+): string {
+  if (activity === "archived") return "Archived project";
+  if (homepage) return "Live demo available";
+  if (activity === "active") return "Working prototype";
+  if (activity === "recent") return "Stable prototype";
+  return "Prototype";
 }
