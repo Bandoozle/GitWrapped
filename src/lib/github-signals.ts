@@ -1,6 +1,9 @@
 import type { FieldSource, StoryItem } from "./types";
 import { newStoryItem } from "./types";
 
+const MIN_BULLETS = 3;
+const MAX_BULLETS = 4;
+
 /** Prefer recruiter-readable sentences over short noun labels. */
 const MIN_CAPABILITY_CHARS = 42;
 const MIN_CAPABILITY_WORDS = 6;
@@ -192,15 +195,54 @@ export function buildFeatures(input: {
   const fromReadme = featuresFromReadme(input.readme);
   const fromCommits = featuresFromCommits(input.commitMessages);
   const fromContext = featuresFromContext(input);
+  const project = input.name.trim() || "this project";
+  const stack = input.technologies.slice(0, 2).join(" and ");
 
-  const merged = uniqueItems([...fromReadme, ...fromCommits, ...fromContext]);
-  const solid = merged.filter((f) => isSubstantial(f.text));
+  const fillers: StoryItem[] = [
+    item(
+      `Core ${project} workflows implemented as a connected product experience${stack ? ` using ${stack}` : ""}`,
+      "suggested",
+      "Project context",
+    ),
+    item(
+      "User-facing screens that make the main product actions clear and reachable",
+      "suggested",
+      "Project context",
+    ),
+    item(
+      "Data and interaction paths wired so the product can be demoed end to end",
+      "suggested",
+      "Project context",
+    ),
+  ];
 
-  if (solid.length >= 3) return solid.slice(0, 4);
-  if (solid.length >= 1) {
-    return uniqueItems([...solid, ...fromContext]).slice(0, 4);
+  const merged = uniqueItems([
+    ...fromReadme,
+    ...fromCommits,
+    ...fromContext,
+    ...fillers,
+  ]).filter((f) => isSubstantial(f.text));
+
+  return ensureMinBullets(merged, fillers).slice(0, MAX_BULLETS);
+}
+
+function ensureMinBullets(items: StoryItem[], fillers: StoryItem[]): StoryItem[] {
+  const out = uniqueItems(items);
+  for (const filler of fillers) {
+    if (out.length >= MIN_BULLETS) break;
+    if (out.some((i) => i.text.toLowerCase() === filler.text.toLowerCase())) continue;
+    out.push(filler);
   }
-  return fromContext.slice(0, 4);
+  while (out.length < MIN_BULLETS) {
+    out.push(
+      item(
+        `Additional product capability delivered as part of the working prototype (${out.length + 1})`,
+        "suggested",
+        "Fallback",
+      ),
+    );
+  }
+  return out;
 }
 
 type TreePath = { path: string; type: string };
@@ -318,25 +360,28 @@ export function detectEngineering(input: {
     if (rule.test(ctx)) {
       found.push(item(rule.label, "detected", "Repo structure & dependencies"));
     }
-    if (found.length >= 4) break;
+    if (found.length >= MAX_BULLETS) break;
   }
 
-  if (!found.length) {
-    return [
-      item(
-        "Clear application structure that separates UI, data, and product workflows",
-        "suggested",
-        "Directory layout",
-      ),
-      item(
-        "Iterative delivery visible in the development history of the repository",
-        "suggested",
-        "Commit history",
-      ),
-    ];
-  }
+  const fillers = [
+    item(
+      "Clear application structure that separates UI, data, and product workflows",
+      "suggested",
+      "Directory layout",
+    ),
+    item(
+      "Iterative delivery visible in the development history of the repository",
+      "suggested",
+      "Commit history",
+    ),
+    item(
+      "Practical engineering choices that keep the product maintainable as it grows",
+      "suggested",
+      "Repo structure",
+    ),
+  ];
 
-  return found;
+  return ensureMinBullets(found, fillers).slice(0, MAX_BULLETS);
 }
 
 /** Small architecture flow for How It Works — 3–5 steps. */
@@ -471,7 +516,25 @@ export function buildShippedPoints(input: {
     );
   }
 
-  return points.slice(0, 4);
+  const fillers = [
+    item(
+      "Core product workflows are implemented and usable as a connected experience",
+      "suggested",
+      "Feature summary",
+    ),
+    item(
+      "Repository shows a practical path from prototype to shareable delivery",
+      "suggested",
+      "Delivery framing",
+    ),
+    item(
+      "Project milestones are captured so reviewers can see what actually shipped",
+      "suggested",
+      "Delivery framing",
+    ),
+  ];
+
+  return ensureMinBullets(points, fillers).slice(0, MAX_BULLETS);
 }
 
 export function buildPeriodLabel(input: {

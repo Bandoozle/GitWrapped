@@ -531,8 +531,9 @@ export function ProjectSlide({ story, format }: SlideProps) {
       {withMedia
         ? mediaFrame(
             cn(
-              "mt-auto w-full rounded-2xl aspect-video",
-              landscape ? "mt-4 max-w-[58%]" : "mt-6",
+              "w-full shrink-0 rounded-2xl aspect-video",
+              // Pin to bottom; pt keeps a fixed gap from content above (don't use mt-* with mt-auto)
+              landscape ? "mt-4 max-w-[58%]" : "mt-auto pt-6",
             ),
             {
               borderColor: theme.border,

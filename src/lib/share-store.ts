@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { list, put } from "@vercel/blob";
+import { get, put } from "@vercel/blob";
 import { nanoid } from "nanoid";
 import type { ProjectStory } from "./types";
 
@@ -13,6 +13,7 @@ export type SharedStory = {
 };
 
 const DATA_DIR = path.join(process.cwd(), ".data", "shares");
+const BLOB_ACCESS = "private" as const;
 
 export function isBlobConfigured() {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
@@ -22,8 +23,16 @@ function isVercel() {
   return process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV);
 }
 
+function blobToken() {
+  return process.env.BLOB_READ_WRITE_TOKEN;
+}
+
 function blobPath(id: string) {
   return `shares/${id}.json`;
+}
+
+function proofBlobBase(id: string) {
+  return `shares/${id}/proof`;
 }
 
 function fileFor(id: string) {
@@ -34,7 +43,24 @@ async function ensureDir() {
   await fs.mkdir(DATA_DIR, { recursive: true });
 }
 
-/** Persist a data-URL screenshot to Blob so share JSON stays small. */
+async function streamToString(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) chunks.push(value);
+  }
+  const merged = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return new TextDecoder().decode(merged);
+}
+
+/** Persist a data-URL screenshot to Blob; return an app proxy URL for the browser. */
 async function persistProofImage(
   shareId: string,
   proofImage: string | null | undefined,
@@ -53,39 +79,64 @@ async function persistProofImage(
   const contentType = match[1]!;
   const buffer = Buffer.from(match[2]!, "base64");
   const ext = contentType.split("/")[1]?.replace("jpeg", "jpg") || "png";
-  const blob = await put(`shares/${shareId}/proof.${ext}`, buffer, {
-    access: "public",
+  await put(`${proofBlobBase(shareId)}.${ext}`, buffer, {
+    access: BLOB_ACCESS,
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType,
-    token: process.env.BLOB_READ_WRITE_TOKEN,
+    token: blobToken(),
   });
-  return blob.url;
+  // Browser cannot read private blob URLs — serve through our API.
+  return `/api/shares/${shareId}/proof`;
 }
 
 async function saveToBlob(record: SharedStory) {
   await put(blobPath(record.id), JSON.stringify(record), {
-    access: "public",
+    access: BLOB_ACCESS,
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/json",
-    token: process.env.BLOB_READ_WRITE_TOKEN,
+    token: blobToken(),
   });
 }
 
 async function getFromBlob(id: string): Promise<SharedStory | null> {
-  const pathname = blobPath(id);
-  const { blobs } = await list({
-    prefix: pathname,
-    limit: 10,
-    token: process.env.BLOB_READ_WRITE_TOKEN,
+  const result = await get(blobPath(id), {
+    access: BLOB_ACCESS,
+    token: blobToken(),
+    useCache: false,
   });
-  const match = blobs.find((b) => b.pathname === pathname);
-  if (!match) return null;
+  if (!result?.stream) return null;
 
-  const res = await fetch(match.url, { cache: "no-store" });
-  if (!res.ok) return null;
-  return (await res.json()) as SharedStory;
+  try {
+    const raw = await streamToString(result.stream);
+    return JSON.parse(raw) as SharedStory;
+  } catch {
+    return null;
+  }
+}
+
+/** Stream a private proof image for a shared story (used by /api/shares/[id]/proof). */
+export async function getSharedProofBlob(id: string): Promise<{
+  stream: ReadableStream<Uint8Array>;
+  contentType: string;
+} | null> {
+  if (!isBlobConfigured()) return null;
+
+  for (const ext of ["jpg", "jpeg", "png", "webp", "gif"]) {
+    const result = await get(`${proofBlobBase(id)}.${ext}`, {
+      access: BLOB_ACCESS,
+      token: blobToken(),
+    });
+    if (result?.stream) {
+      const contentType =
+        result.blob.contentType ||
+        result.headers.get("content-type") ||
+        `image/${ext === "jpg" ? "jpeg" : ext}`;
+      return { stream: result.stream, contentType };
+    }
+  }
+  return null;
 }
 
 async function saveToFs(record: SharedStory) {
