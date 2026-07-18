@@ -33,7 +33,7 @@ export default function DashboardPage() {
           <h1 className="font-display text-4xl tracking-tight text-balance text-foreground sm:text-5xl">
             Projects
           </h1>
-          <p className="mt-2 text-muted">Stories from your GitHub repositories.</p>
+          <p className="mt-2 text-muted">Stories from your public GitHub repositories.</p>
         </div>
         <Link href="/story/new" className={buttonClass("primary", "md")}>
           <Plus className="h-4 w-4" aria-hidden="true" />

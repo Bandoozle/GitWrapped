@@ -13,6 +13,10 @@ import {
 
 const GITHUB_API = "https://api.github.com";
 
+/** Raised when a private repository is listed or imported. */
+export const PUBLIC_REPOS_ONLY_ERROR =
+  "GitWrapped only supports public GitHub repositories.";
+
 /** Languages that are usually supporting metadata, not the project story. */
 const SUPPORT_ONLY_LANGS = new Set([
   "html",
@@ -103,26 +107,29 @@ async function ghOptional<T>(path: string, token?: string): Promise<T | null> {
 export async function listUserRepos(token: string): Promise<RepoOption[]> {
   const pages: GhRepo[] = [];
   for (let page = 1; page <= 3; page++) {
+    // visibility=public + affiliation=owner: no private repos, no org-owned repos
     const batch = await gh<GhRepo[]>(
-      `/user/repos?sort=updated&per_page=100&page=${page}&affiliation=owner,collaborator`,
+      `/user/repos?visibility=public&affiliation=owner&sort=updated&per_page=100&page=${page}`,
       token,
     );
     pages.push(...batch);
     if (batch.length < 100) break;
   }
 
-  return pages.map((repo) => ({
-    id: String(repo.id),
-    name: repo.name,
-    fullName: repo.full_name,
-    description: repo.description || "No description",
-    language: repo.language || "Unknown",
-    stars: repo.stargazers_count,
-    forks: repo.forks_count,
-    updatedAt: repo.updated_at,
-    private: repo.private,
-    htmlUrl: repo.html_url,
-  }));
+  return pages
+    .filter((repo) => repo.private === false)
+    .map((repo) => ({
+      id: String(repo.id),
+      name: repo.name,
+      fullName: repo.full_name,
+      description: repo.description || "No description",
+      language: repo.language || "Unknown",
+      stars: repo.stargazers_count,
+      forks: repo.forks_count,
+      updatedAt: repo.updated_at,
+      private: false,
+      htmlUrl: repo.html_url,
+    }));
 }
 
 export async function importRepoStory(
@@ -132,8 +139,12 @@ export async function importRepoStory(
   const [owner, repo] = fullName.split("/");
   if (!owner || !repo) throw new Error("Invalid repository");
 
-  const [meta, languages, commits, contributors, releases, readmeRaw] = await Promise.all([
-    gh<GhRepo>(`/repos/${owner}/${repo}`, token),
+  const meta = await gh<GhRepo>(`/repos/${owner}/${repo}`, token);
+  if (meta.private) {
+    throw new Error(PUBLIC_REPOS_ONLY_ERROR);
+  }
+
+  const [languages, commits, contributors, releases, readmeRaw] = await Promise.all([
     gh<Record<string, number>>(`/repos/${owner}/${repo}/languages`, token),
     fetchCommits(owner, repo, token),
     gh<{ login: string }[]>(`/repos/${owner}/${repo}/contributors?per_page=10`, token).catch(

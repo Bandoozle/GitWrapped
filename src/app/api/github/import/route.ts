@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth, isGitHubAuthConfigured } from "@/auth";
-import { importRepoStory } from "@/lib/github";
+import { importRepoStory, PUBLIC_REPOS_ONLY_ERROR } from "@/lib/github";
 
 export async function POST(request: Request) {
   if (!isGitHubAuthConfigured()) {
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ story });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Import failed";
-    return NextResponse.json({ error: message }, { status: 502 });
+    const status = message === PUBLIC_REPOS_ONLY_ERROR ? 403 : 502;
+    return NextResponse.json({ error: message }, { status });
   }
 }

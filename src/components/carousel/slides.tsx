@@ -5,7 +5,6 @@ import type { ExportFormat, ProjectStory, TemplateId } from "@/lib/types";
 import { TechGlyph } from "@/lib/tech-icons";
 import { cn } from "@/lib/utils";
 import {
-  ArrowUpRight,
   CheckCircle2,
   Code2,
   Cpu,
@@ -456,7 +455,7 @@ export function ProjectSlide({ story, format }: SlideProps) {
       <img
         src={proofImage!}
         alt="Project screenshot"
-        className="h-full w-full object-cover"
+        className="h-full w-full object-cover object-top"
       />
       {mediaHref ? (
         <a
@@ -466,15 +465,6 @@ export function ProjectSlide({ story, format }: SlideProps) {
           className="absolute inset-0 z-10"
           aria-label="Open project demo"
         />
-      ) : null}
-      {mediaHref ? (
-        <span
-          className="pointer-events-none absolute right-4 bottom-4 flex h-12 w-12 items-center justify-center rounded-full border-2 bg-black/35"
-          style={{ borderColor: accent, color: accent }}
-          aria-hidden="true"
-        >
-          <ArrowUpRight className="h-6 w-6" strokeWidth={2} />
-        </span>
       ) : null}
     </div>
   );

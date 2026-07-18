@@ -19,7 +19,7 @@ export async function GET() {
     return NextResponse.json(
       {
         error:
-          "GitHub token missing from session. Sign out, then sign in with GitHub again to grant repo access.",
+          "GitHub token missing from session. Sign out, then sign in with GitHub again.",
       },
       { status: 401 },
     );

@@ -40,7 +40,13 @@ export default function SettingsPage() {
                 <span className="font-medium text-foreground">
                   {session.user?.login ?? session.user?.name}
                 </span>
-                . Private and public repos can be imported.
+                . Only your public repositories can be imported.
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-muted">
+                GitWrapped uses GitHub sign-in to verify your account and import public
+                repository data. It does not request access to private repositories or
+                organizations. If you previously granted broader access, disconnect and
+                sign in again to refresh permissions.
               </p>
               <Button
                 variant="secondary"
@@ -53,7 +59,9 @@ export default function SettingsPage() {
           ) : (
             <>
               <p className="mt-2 text-sm text-muted">
-                Connect GitHub to import real repositories and commit history.
+                GitWrapped uses GitHub sign-in to verify your account and import public
+                repository data. It does not request access to private repositories or
+                organizations.
               </p>
               <Button
                 onClick={() => signIn("github", { callbackUrl: "/settings" })}

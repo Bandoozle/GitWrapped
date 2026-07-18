@@ -2,78 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import {
-  Check,
-  CheckCircle2,
-  Code2,
-  Cpu,
-  Layers,
-  LoaderCircle,
-  Sparkles,
-  User,
-  type LucideIcon,
-} from "lucide-react";
+import { Check, LoaderCircle, Sparkles } from "lucide-react";
+import { EXAMPLE_STORY } from "@/lib/preview-story";
+import { SLIDE_COMPONENTS } from "@/components/carousel/slides";
+import { SlidePreview } from "@/components/carousel/slide-preview";
 import { cn } from "@/lib/utils";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
 const REPOS = [
-  { name: "BargAI", meta: "Python · JavaScript · Gemini" },
+  { name: "GitWrapped", meta: "TypeScript · Next.js · Auth.js" },
   { name: "HomeHub", meta: "TypeScript · Next.js" },
   { name: "pulse-board", meta: "React · Supabase" },
 ] as const;
 
-const LINE_ICONS: LucideIcon[] = [Sparkles, Layers, Code2, Cpu, CheckCircle2, User];
-
-const CAROUSEL = [
-  {
-    index: "01",
-    label: "Project Snapshot",
-    title: "BargAI",
-    body: "A real-time AI meeting assistant that turns live captions into summaries and next steps.",
-    accent: "#A78BFA",
-    lines: [
-      { text: "Full-stack Developer", icon: User },
-      { text: "Working prototype", icon: CheckCircle2 },
-    ],
+/** Same example story, but keep the cleaner demo image treatment (no link arrow). */
+const DEMO_STORY = {
+  ...EXAMPLE_STORY,
+  carousel: {
+    ...EXAMPLE_STORY.carousel,
+    proofLink: null,
   },
-  {
-    index: "02",
-    label: "What I Built",
-    title: "What I actually delivered.",
-    body: null,
-    accent: "#A3E635",
-    lines: [
-      { text: "Live transcript capture", icon: Sparkles },
-      { text: "Context-aware AI responses", icon: Layers },
-      { text: "Automatic summaries & action items", icon: Code2 },
-    ],
-  },
-  {
-    index: "03",
-    label: "How It Works",
-    title: "The important path.",
-    body: "Transcript → filter → AI → structured response",
-    accent: "#F472B6",
-    lines: [
-      { text: "Async transcript pipeline", icon: Cpu },
-      { text: "Python service ↔ JS interface", icon: Layers },
-      { text: "Empty-output handling", icon: CheckCircle2 },
-    ],
-  },
-  {
-    index: "04",
-    label: "What It Achieved",
-    title: "What this project achieved.",
-    body: "Delivery milestones — what shipped and what it unlocked.",
-    accent: "#7DD3FC",
-    lines: [
-      { text: "Working end-to-end prototype", icon: CheckCircle2 },
-      { text: "Live transcript-to-insight workflow", icon: Sparkles },
-      { text: "Latest release · v1.0", icon: Code2 },
-    ],
-  },
-] as const;
+};
 
 type Phase =
   | { kind: "pick" }
@@ -83,64 +33,23 @@ type Phase =
 const PHASES: { phase: Phase; ms: number }[] = [
   { phase: { kind: "pick" }, ms: 2400 },
   { phase: { kind: "import" }, ms: 1400 },
-  { phase: { kind: "card", card: 0 }, ms: 2400 },
-  { phase: { kind: "card", card: 1 }, ms: 2400 },
-  { phase: { kind: "card", card: 2 }, ms: 2800 },
+  { phase: { kind: "card", card: 0 }, ms: 2800 },
+  { phase: { kind: "card", card: 1 }, ms: 2600 },
+  { phase: { kind: "card", card: 2 }, ms: 2600 },
+  { phase: { kind: "card", card: 3 }, ms: 2800 },
 ];
 
 function phaseKey(p: Phase) {
   return p.kind === "card" ? `card-${p.card}` : p.kind;
 }
 
-function hexAlpha(hex: string, alpha: number) {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
-function MiniCard({ card }: { card: (typeof CAROUSEL)[number] }) {
+function DemoSlide({ index }: { index: number }) {
+  const Slide = SLIDE_COMPONENTS[index]!.Component;
   return (
-    <div
-      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 p-5 sm:p-6"
-      style={{
-        background: `radial-gradient(ellipse 80% 60% at 85% 10%, ${hexAlpha(card.accent, 0.18)}, transparent 55%), #0a0a0c`,
-      }}
-    >
-      <p className="font-mono text-[10px] tracking-[0.18em] text-zinc-500 sm:text-[11px]">
-        {card.index}
-      </p>
-      <p
-        className="mt-2 font-mono text-[10px] tracking-[0.2em] uppercase sm:text-[11px]"
-        style={{ color: card.accent }}
-      >
-        {card.label}
-      </p>
-      <h3 className="mt-4 font-display text-2xl leading-[1.05] tracking-tight text-white sm:text-3xl">
-        {card.title}
-      </h3>
-      {card.body ? (
-        <p className="mt-3 max-w-[34ch] text-sm leading-snug text-zinc-400 sm:text-[15px]">
-          {card.body}
-        </p>
-      ) : null}
-      <ul className="mt-5 space-y-3">
-        {card.lines.map((line, i) => {
-          const Icon = line.icon ?? LINE_ICONS[i % LINE_ICONS.length]!;
-          return (
-            <li key={line.text} className="flex items-start gap-3 text-sm text-zinc-200 sm:text-[15px]">
-              <span
-                className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border"
-                style={{ borderColor: card.accent, color: card.accent }}
-              >
-                <Icon className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
-              </span>
-              <span className="pt-0.5 leading-snug">{line.text}</span>
-            </li>
-          );
-        })}
-      </ul>
+    <div className="h-full w-full overflow-hidden rounded-2xl">
+      <SlidePreview className="h-full !aspect-auto">
+        <Slide story={DEMO_STORY} />
+      </SlidePreview>
     </div>
   );
 }
@@ -208,7 +117,7 @@ function ImportPhase() {
       >
         <LoaderCircle className="h-8 w-8" aria-hidden />
       </motion.div>
-      <p className="mt-5 text-sm font-medium text-white">Reading BargAI…</p>
+      <p className="mt-5 text-sm font-medium text-white">Reading GitWrapped…</p>
       <p className="mt-2 max-w-[28ch] text-xs leading-relaxed text-zinc-500">
         Pulling README, commits, CI, and stack into four recruiter-ready cards
       </p>
@@ -256,8 +165,6 @@ export function HeroUseCaseDemo() {
     return () => window.clearTimeout(t);
   }, [phaseIndex, reduceMotion]);
 
-  const stepIndex = phaseIndex;
-
   const stepLabel =
     current.kind === "pick"
       ? "Import a repository"
@@ -268,8 +175,8 @@ export function HeroUseCaseDemo() {
   if (reduceMotion) {
     return (
       <div className="relative mx-auto w-full max-w-[440px] lg:max-w-none">
-        <div className="aspect-[4/5] w-full">
-          <MiniCard card={CAROUSEL[0]} />
+        <div className="aspect-[4/5] w-full overflow-hidden rounded-[1.35rem] ring-1 ring-white/10">
+          <DemoSlide index={0} />
         </div>
       </div>
     );
@@ -287,23 +194,39 @@ export function HeroUseCaseDemo() {
       />
 
       <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.35rem] shadow-[0_24px_80px_-20px_rgba(0,0,0,0.85)] ring-1 ring-white/10">
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-4 pt-3.5 sm:px-5 sm:pt-4">
-          <p className="inline-flex items-center gap-2 text-xs leading-none text-zinc-400">
-            <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
-            <span className="font-medium text-zinc-300">{stepLabel}</span>
-          </p>
-          <div className="flex h-1 shrink-0 items-center gap-1.5" aria-hidden>
-            {[0, 1, 2, 3, 4].map((i) => (
-              <span
-                key={i}
-                className={cn(
-                  "h-1 w-4 rounded-full transition-colors duration-300",
-                  i === stepIndex ? "bg-accent" : "bg-white/20",
-                )}
-              />
-            ))}
+        {current.kind !== "card" ? (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-4 pt-3.5 sm:px-5 sm:pt-4">
+            <p className="inline-flex items-center gap-2 text-xs leading-none text-zinc-400">
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+              <span className="font-medium text-zinc-300">{stepLabel}</span>
+            </p>
+            <div className="flex h-1 shrink-0 items-center gap-1.5" aria-hidden>
+              {PHASES.map((_, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "h-1 w-3.5 rounded-full transition-colors duration-300 sm:w-4",
+                    i === phaseIndex ? "bg-accent" : "bg-white/20",
+                  )}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end px-4 pt-3.5 sm:px-5 sm:pt-4">
+            <div className="flex h-1 shrink-0 items-center gap-1.5" aria-hidden>
+              {PHASES.map((_, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "h-1 w-3.5 rounded-full transition-colors duration-300 sm:w-4",
+                    i === phaseIndex ? "bg-accent" : "bg-white/20",
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -312,14 +235,17 @@ export function HeroUseCaseDemo() {
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
             transition={{ duration: 0.4, ease }}
-            className="absolute inset-0 pt-9 sm:pt-10"
+            className={cn(
+              "absolute inset-0",
+              current.kind !== "card" && "pt-9 sm:pt-10",
+            )}
           >
             {current.kind === "pick" ? (
               <PickPhase selected={picked} />
             ) : current.kind === "import" ? (
               <ImportPhase />
             ) : (
-              <MiniCard card={CAROUSEL[current.card]!} />
+              <DemoSlide index={current.card} />
             )}
           </motion.div>
         </AnimatePresence>

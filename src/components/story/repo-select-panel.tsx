@@ -9,8 +9,7 @@ import { fieldClass } from "@/components/ui/field";
 const ease = [0.22, 1, 0.36, 1] as const;
 
 function repoMeta(repo: RepoOption) {
-  const parts = [repo.language, repo.private ? "Private" : null].filter(Boolean);
-  return parts.join(" · ") || repo.fullName;
+  return repo.language || repo.fullName;
 }
 
 function RepoSkeletonList() {

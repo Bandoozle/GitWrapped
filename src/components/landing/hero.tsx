@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
 import { HeroUseCaseDemo } from "@/components/landing/hero-demo";
-import { ExamplesSection } from "@/components/landing/examples";
+import { TemplatesSection } from "@/components/landing/templates";
 import { SiteNav } from "@/components/site-nav";
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -244,7 +244,7 @@ export function LandingPage() {
     <div className="relative z-10 min-h-screen bg-background text-foreground">
       <SiteNav />
       <Hero />
-      <ExamplesSection />
+      <TemplatesSection />
       <HowItWorks />
       <WhatItShows />
       <Faq />

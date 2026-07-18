@@ -5,7 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import { GitBranch } from "lucide-react";
 
 const NAV_LINKS = [
-  { href: "/#examples", label: "Examples" },
+  { href: "/#templates", label: "Templates" },
   { href: "/#how-it-works", label: "How It Works" },
   { href: "/#what-it-shows", label: "What It Shows" },
   { href: "/#faq", label: "FAQ" },

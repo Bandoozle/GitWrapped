@@ -14,7 +14,7 @@ const providers = isGitHubAuthConfigured()
         clientSecret: process.env.AUTH_GITHUB_SECRET!,
         authorization: {
           params: {
-            scope: "read:user user:email repo",
+            scope: "read:user user:email",
           },
         },
       }),

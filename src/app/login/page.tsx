@@ -19,7 +19,9 @@ export default function LoginPage() {
           Connect GitHub
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-pretty text-muted">
-          Import your repositories, generate a carousel, and share a live link.
+          GitWrapped uses GitHub sign-in to verify your account and import public
+          repository data. It does not request access to private repositories or
+          organizations.
         </p>
         <Button
           size="lg"

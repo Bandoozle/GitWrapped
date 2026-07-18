@@ -344,7 +344,10 @@ function NewStoryInner() {
           >
             {!signedIn ? (
               <div className="mx-auto max-w-xl rounded-2xl border border-white/10 bg-[#0a0a0c] p-8 text-center">
-                <p className="text-zinc-400">Sign in to import repositories from GitHub.</p>
+                <p className="text-zinc-400">
+                  Sign in with GitHub to import your public repositories. GitWrapped does not
+                  request access to private repos or organizations.
+                </p>
                 <Button
                   onClick={() => signIn("github", { callbackUrl: "/story/new" })}
                   className="mt-4"
