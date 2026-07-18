@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toPng } from "html-to-image";
@@ -19,9 +19,11 @@ export default function ExportPage() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [previewWidth, setPreviewWidth] = useState(0);
+  const [previewMaxHeight, setPreviewMaxHeight] = useState(420);
   const slideRef = useRef<HTMLDivElement>(null);
+  const previewSlotRef = useRef<HTMLDivElement>(null);
 
-  // Derived from the store so a freshly created share id shows up automatically.
   const shareUrl = useMemo(
     () =>
       story?.shareId && typeof window !== "undefined"
@@ -31,6 +33,37 @@ export default function ExportPage() {
   );
 
   const size = EXPORT_SIZES.find((s) => s.id === format)!;
+  const widthFromHeight = (previewMaxHeight * size.width) / size.height;
+  const stagedWidth =
+    previewWidth > 0
+      ? Math.max(1, Math.floor(Math.min(previewWidth, widthFromHeight, size.width)))
+      : 0;
+  const stagedHeight =
+    stagedWidth > 0 ? Math.max(1, Math.floor((stagedWidth * size.height) / size.width)) : 0;
+  const previewScale = stagedWidth > 0 ? stagedWidth / size.width : 0;
+
+  useEffect(() => {
+    const slot = previewSlotRef.current;
+    if (!slot) return;
+
+    const update = () => {
+      // Empty full-width slot — never includes the 1080px canvas in the measurement
+      const w = Math.floor(slot.getBoundingClientRect().width);
+      if (w > 0) setPreviewWidth(w);
+      setPreviewMaxHeight(
+        Math.max(220, Math.min(480, Math.floor(window.innerHeight * 0.45))),
+      );
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(slot);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [story]);
 
   async function ensureShareLink() {
     if (!story) return null;
@@ -137,15 +170,17 @@ export default function ExportPage() {
   }
 
   if (story === null) {
-    return <p className="py-16 text-center text-sm text-muted" role="status">Loading…</p>;
+    return (
+      <p className="py-16 text-center text-sm text-muted" role="status">
+        Loading…
+      </p>
+    );
   }
 
   if (!story) {
     return (
       <div className="mx-auto max-w-md py-16 text-center">
-        <h1 className="font-display text-2xl tracking-tight text-foreground">
-          Story not found
-        </h1>
+        <h1 className="font-display text-2xl tracking-tight text-foreground">Story not found</h1>
         <p className="mt-2 text-sm text-muted">
           It may have been removed or created on another device.
         </p>
@@ -156,133 +191,74 @@ export default function ExportPage() {
     );
   }
 
-  const Active = SLIDE_COMPONENTS[slideIndex].Component;
-  const previewScale = Math.min(1, 520 / size.width);
+  const Active = SLIDE_COMPONENTS[slideIndex]!.Component;
 
   return (
-    <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">Share &amp; export</p>
-          <h1 className="mt-2 font-display text-4xl tracking-tight text-balance text-foreground">
+    <div className="min-w-0 max-w-full overflow-x-hidden pb-8">
+      <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
+            Share &amp; export
+          </p>
+          <h1 className="mt-2 font-display text-2xl tracking-tight text-balance break-words text-foreground sm:text-4xl">
             {story.name} carousel
           </h1>
-          <p className="mt-2 text-pretty text-muted">
+          <p className="mt-2 text-sm text-pretty text-muted sm:text-base">
             Share a live link — or download PNGs for LinkedIn uploads.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
           <Button
             disabled={sharing}
             aria-busy={sharing}
             onClick={() => void copyShareLink()}
+            className="min-w-0 w-full truncate sm:w-auto"
           >
             {copied ? (
-              <Check className="h-4 w-4" aria-hidden="true" />
+              <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
             ) : (
-              <Link2 className="h-4 w-4" aria-hidden="true" />
+              <Link2 className="h-4 w-4 shrink-0" aria-hidden="true" />
             )}
-            {sharing ? "Creating link…" : copied ? "Copied!" : "Copy share link"}
+            <span className="truncate">
+              {sharing ? "Creating…" : copied ? "Copied!" : "Copy link"}
+            </span>
           </Button>
           <Button
             variant="secondary"
             disabled={busy}
             aria-busy={busy}
             onClick={() => void downloadAll()}
+            className="min-w-0 w-full truncate sm:w-auto"
           >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            {busy ? "Exporting…" : "Download PNGs"}
+            <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="truncate">{busy ? "Exporting…" : "Download"}</span>
           </Button>
         </div>
       </div>
 
-      {shareUrl && (
-        <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm">
-          <span className="text-muted">Live carousel</span>
+      {shareUrl ? (
+        <div className="mt-4 flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-surface-2 px-3 py-3 text-sm sm:mt-6 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-4">
+          <span className="shrink-0 text-muted">Live carousel</span>
           <a
             href={shareUrl}
-            className="break-all font-mono text-foreground underline-offset-4 hover:underline"
+            className="min-w-0 break-all font-mono text-xs text-foreground underline-offset-4 hover:underline sm:text-sm"
           >
             {shareUrl}
           </a>
           <button
             type="button"
             onClick={() => void copyShareLink()}
-            className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-muted transition-colors hover:text-foreground active:scale-[0.97]"
+            className="inline-flex items-center gap-1 self-start rounded-md px-1.5 py-1 text-muted transition-colors hover:text-foreground active:scale-[0.97] sm:ml-auto"
           >
             <Copy className="h-3.5 w-3.5" aria-hidden="true" />
             Copy
           </button>
         </div>
-      )}
+      ) : null}
 
-      <div className="mt-10 grid gap-10 lg:grid-cols-[280px_1fr]">
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-sm text-muted">Format</h2>
-            <div className="mt-3 space-y-2">
-              {EXPORT_SIZES.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  aria-pressed={format === option.id}
-                  onClick={() => setFormat(option.id)}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-sm transition-colors duration-150 ease-out active:scale-[0.99]",
-                    format === option.id
-                      ? "border-white bg-white/10"
-                      : "border-border bg-surface hover:border-white/30",
-                  )}
-                >
-                  <span>{option.label}</span>
-                  <span className="font-mono text-xs tabular-nums text-muted">
-                    {option.width}×{option.height}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-sm text-muted">Slides</h2>
-            <div className="mt-3 space-y-2">
-              {SLIDE_COMPONENTS.map((slide, i) => (
-                <div
-                  key={slide.id}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors duration-150 ease-out",
-                    slideIndex === i ? "bg-white text-black" : "hover:bg-surface",
-                  )}
-                >
-                  <button
-                    type="button"
-                    aria-current={slideIndex === i ? "true" : undefined}
-                    onClick={() => setSlideIndex(i)}
-                    className="flex-1 text-left tabular-nums"
-                  >
-                    {i + 1}. {slide.label}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void downloadSlide(i)}
-                    className={cn(
-                      "rounded p-1 transition-colors active:scale-[0.97]",
-                      slideIndex === i
-                        ? "text-black/60 hover:text-black"
-                        : "text-muted hover:text-foreground",
-                    )}
-                    aria-label={`Download slide ${i + 1}`}
-                  >
-                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-4 flex items-center justify-between">
+      <div className="mt-6 flex min-w-0 flex-col gap-6 lg:mt-10 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
+        <div className="min-w-0 lg:order-2">
+          <div className="mb-3 flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => setSlideIndex((i) => Math.max(0, i - 1))}
@@ -308,27 +284,101 @@ export default function ExportPage() {
             </button>
           </div>
 
-          <div className="flex justify-center overflow-auto rounded-2xl bg-surface-2/60 p-6 ring-1 ring-border">
-            <div
-              style={{
-                width: size.width * previewScale,
-                height: size.height * previewScale,
-              }}
-              className="overflow-hidden rounded-xl shadow-xl"
-            >
+          <div className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl bg-surface-2/60 p-3 ring-1 ring-border sm:p-5">
+            {/* Width probe only — keeps the 1080px canvas out of layout measurement */}
+            <div ref={previewSlotRef} className="w-full min-w-0" />
+            {stagedWidth > 0 ? (
               <div
-                ref={slideRef}
+                className="relative mx-auto overflow-hidden rounded-xl shadow-xl"
                 style={{
-                  width: size.width,
-                  height: size.height,
-                  transform: `scale(${previewScale})`,
-                  transformOrigin: "top left",
+                  width: stagedWidth,
+                  height: stagedHeight,
+                  contain: "paint",
                 }}
               >
-                <div className="h-full w-full [&_>div]:h-full [&_>div]:aspect-auto">
-                  <Active story={story} format={format} />
+                <div
+                  ref={slideRef}
+                  className="absolute top-0 left-0 origin-top-left"
+                  style={{
+                    width: size.width,
+                    height: size.height,
+                    transform: `scale(${previewScale})`,
+                  }}
+                >
+                  <div className="h-full w-full [&_>div]:h-full [&_>div]:aspect-auto [&_>div]:max-w-none">
+                    <Active story={story} format={format} />
+                  </div>
                 </div>
               </div>
+            ) : (
+              <div
+                className="mx-auto w-full rounded-xl bg-surface-2"
+                style={{ aspectRatio: `${size.width} / ${size.height}` }}
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="min-w-0 space-y-5 lg:order-1 lg:space-y-6">
+          <div className="min-w-0">
+            <h2 className="text-sm text-muted">Format</h2>
+            <div className="mt-3 grid min-w-0 grid-cols-2 gap-2 lg:flex lg:flex-col lg:gap-2">
+              {EXPORT_SIZES.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={format === option.id}
+                  onClick={() => setFormat(option.id)}
+                  className={cn(
+                    "flex min-w-0 items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left text-xs transition-colors duration-150 ease-out active:scale-[0.99] sm:text-sm lg:px-4 lg:py-3",
+                    format === option.id
+                      ? "border-white bg-white/10"
+                      : "border-border bg-surface hover:border-white/30",
+                  )}
+                >
+                  <span className="min-w-0 truncate">{option.label}</span>
+                  <span className="hidden shrink-0 font-mono text-[10px] tabular-nums text-muted lg:inline">
+                    {option.width}×{option.height}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            <h2 className="text-sm text-muted">Slides</h2>
+            <div className="mt-3 grid min-w-0 grid-cols-2 gap-2 lg:flex lg:flex-col lg:gap-2">
+              {SLIDE_COMPONENTS.map((slide, i) => (
+                <div
+                  key={slide.id}
+                  className={cn(
+                    "flex min-w-0 items-center justify-between gap-1 rounded-lg px-2.5 py-2 text-xs transition-colors duration-150 ease-out sm:text-sm lg:px-3",
+                    slideIndex === i ? "bg-white text-black" : "bg-surface hover:bg-surface-2",
+                  )}
+                >
+                  <button
+                    type="button"
+                    aria-current={slideIndex === i ? "true" : undefined}
+                    onClick={() => setSlideIndex(i)}
+                    className="min-w-0 flex-1 truncate text-left tabular-nums"
+                  >
+                    {i + 1}. {slide.label}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void downloadSlide(i)}
+                    className={cn(
+                      "shrink-0 rounded p-1 transition-colors active:scale-[0.97]",
+                      slideIndex === i
+                        ? "text-black/60 hover:text-black"
+                        : "text-muted hover:text-foreground",
+                    )}
+                    aria-label={`Download slide ${i + 1}`}
+                  >
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </div>

@@ -92,7 +92,7 @@ const FAQS = [
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden pt-24 pb-16 sm:pt-28 sm:pb-20">
+    <section className="relative overflow-hidden pt-[5.75rem] pb-16 sm:pt-28 sm:pb-20">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
