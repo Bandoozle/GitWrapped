@@ -42,11 +42,27 @@ export default function ExportPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ story, shareId: story.shareId }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create share link");
-      const url = data.url as string;
-      upsertProject({ ...story, shareId: data.id as string });
-      return url;
+      const text = await res.text();
+      let data: { error?: string; url?: string; id?: string } = {};
+      if (text) {
+        try {
+          data = JSON.parse(text) as typeof data;
+        } catch {
+          throw new Error(
+            res.ok
+              ? "Share link response was invalid."
+              : `Share link failed (${res.status}). Check that Vercel Blob is connected.`,
+          );
+        }
+      }
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to create share link (${res.status})`);
+      }
+      if (!data.url || !data.id) {
+        throw new Error("Share link response was incomplete.");
+      }
+      upsertProject({ ...story, shareId: data.id });
+      return data.url;
     } finally {
       setSharing(false);
     }

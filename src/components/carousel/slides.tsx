@@ -36,7 +36,10 @@ function formatFlags(format?: ExportFormat) {
 }
 
 type Theme = {
+  /** Solid fallback / Stack pill contrast base */
   base: string;
+  /** Full CSS background (gradient templates use a mesh). */
+  canvas: string;
   text: string;
   muted: string;
   border: string;
@@ -47,6 +50,7 @@ type Theme = {
 const THEMES: Record<TemplateId, Theme> = {
   minimal: {
     base: "#F4F3EE",
+    canvas: "#F4F3EE",
     text: "#0A0A0A",
     muted: "rgba(10,10,10,0.52)",
     border: "rgba(10,10,10,0.1)",
@@ -59,29 +63,32 @@ const THEMES: Record<TemplateId, Theme> = {
     },
   },
   dark: {
-    base: "#07090E",
-    text: "#FFFFFF",
-    muted: "rgba(255,255,255,0.55)",
-    border: "rgba(255,255,255,0.12)",
-    rule: "rgba(255,255,255,0.16)",
+    base: "#0A0A0B",
+    canvas: "#0A0A0B",
+    text: "#F4F4F5",
+    muted: "rgba(244,244,245,0.5)",
+    border: "rgba(255,255,255,0.1)",
+    rule: "rgba(255,255,255,0.12)",
     accents: {
-      project: "#A78BFA",
-      built: "#A3E635",
-      engineering: "#F472B6",
+      project: "#C4B5FD",
+      built: "#BEF264",
+      engineering: "#F9A8D4",
       shipped: "#7DD3FC",
     },
   },
   gradient: {
-    base: "#06050A",
+    base: "#1A0B2E",
+    canvas:
+      "linear-gradient(155deg, #2B1055 0%, #1A0B2E 28%, #0B1B3A 62%, #06201F 100%)",
     text: "#FFFFFF",
-    muted: "rgba(255,255,255,0.58)",
-    border: "rgba(255,255,255,0.14)",
-    rule: "rgba(255,255,255,0.18)",
+    muted: "rgba(255,255,255,0.62)",
+    border: "rgba(255,255,255,0.18)",
+    rule: "rgba(255,255,255,0.22)",
     accents: {
-      project: "#C084FC",
+      project: "#E879F9",
       built: "#A3E635",
-      engineering: "#F472B6",
-      shipped: "#7DD3FC",
+      engineering: "#FB7185",
+      shipped: "#38BDF8",
     },
   },
 };
@@ -108,7 +115,10 @@ function Atmosphere({
   kind: SlideKind;
 }) {
   const light = template === "minimal";
-  const intensity = template === "gradient" ? 0.38 : light ? 0.16 : 0.28;
+  const vivid = template === "gradient";
+
+  // Dark: visible single-accent wash. Gradient: bold multi-hue bloom. Minimal: soft tint.
+  const intensity = vivid ? 0.48 : light ? 0.16 : 0.32;
   const a =
     kind === "project"
       ? { x: "82%", y: "12%", s: "70%" }
@@ -126,13 +136,37 @@ function Atmosphere({
           ? { x: "15%", y: "18%", s: "52%" }
           : { x: "85%", y: "18%", s: "58%" };
 
+  // Second bloom uses a complementary hue on Gradient so cards feel painted, not flat.
+  const secondary =
+    kind === "project"
+      ? "#38BDF8"
+      : kind === "built"
+        ? "#E879F9"
+        : kind === "engineering"
+          ? "#A3E635"
+          : "#FB7185";
+
   return (
     <>
       <div
         aria-hidden
         className="pointer-events-none absolute -inset-[20%] opacity-90"
         style={{
-          background: `
+          background: vivid
+            ? `
+            radial-gradient(ellipse ${a.s} ${a.s} at ${a.x} ${a.y},
+              ${hexAlpha(color, intensity)} 0%,
+              ${hexAlpha(color, intensity * 0.4)} 32%,
+              transparent 68%),
+            radial-gradient(ellipse ${b.s} ${b.s} at ${b.x} ${b.y},
+              ${hexAlpha(secondary, intensity * 0.7)} 0%,
+              ${hexAlpha(secondary, intensity * 0.25)} 40%,
+              transparent 70%),
+            radial-gradient(ellipse 90% 60% at 50% 110%,
+              ${hexAlpha(color, 0.22)} 0%,
+              transparent 55%)
+          `
+            : `
             radial-gradient(ellipse ${a.s} ${a.s} at ${a.x} ${a.y},
               ${hexAlpha(color, intensity)} 0%,
               ${hexAlpha(color, intensity * 0.45)} 28%,
@@ -143,7 +177,7 @@ function Atmosphere({
               ${hexAlpha(color, intensity * 0.18)} 35%,
               transparent 65%)
           `,
-          filter: "blur(2px)",
+          filter: vivid ? "blur(6px)" : "blur(2px)",
         }}
       />
       <div
@@ -152,7 +186,9 @@ function Atmosphere({
         style={{
           background: light
             ? "radial-gradient(ellipse 90% 70% at 50% 40%, transparent 40%, rgba(244,243,238,0.55) 100%)"
-            : "radial-gradient(ellipse 85% 70% at 50% 40%, transparent 35%, rgba(0,0,0,0.45) 100%)",
+            : vivid
+              ? "radial-gradient(ellipse 80% 55% at 50% 0%, rgba(255,255,255,0.06) 0%, transparent 50%)"
+              : "radial-gradient(ellipse 85% 70% at 50% 40%, transparent 50%, rgba(0,0,0,0.35) 100%)",
         }}
       />
     </>
@@ -181,7 +217,7 @@ function Shell({
         shellAspect(format),
       )}
       style={{
-        background: theme.base,
+        background: theme.canvas,
         color: theme.text,
         border: `1px solid ${theme.border}`,
       }}

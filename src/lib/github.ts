@@ -4,11 +4,10 @@ import { detectTechnologies } from "./tech-detect";
 import {
   buildArchitectureFlow,
   buildEvidence,
+  buildFeatures,
   buildPeriodLabel,
   buildShippedPoints,
   detectEngineering,
-  featuresFromCommits,
-  featuresFromReadme,
 } from "./github-signals";
 
 const GITHUB_API = "https://api.github.com";
@@ -175,12 +174,15 @@ export async function importRepoStory(
   const releasePublishedAt = releases[0]?.published_at ?? null;
   const contributorCount = contributors.length || 1;
 
-  const readmeFeatures = featuresFromReadme(readmeRaw);
-  const commitFeatures = featuresFromCommits(commits.map((c) => c.commit.message));
-  const features =
-    readmeFeatures.length >= 2
-      ? readmeFeatures.slice(0, 4)
-      : uniqueItems([...readmeFeatures, ...commitFeatures]).slice(0, 4);
+  const features = buildFeatures({
+    readme: readmeRaw,
+    commitMessages: commits.map((c) => c.commit.message),
+    description: meta.description ?? "",
+    name: meta.name,
+    technologies,
+    tree,
+    packageJson,
+  });
 
   const engineering = detectEngineering({
     tree,
@@ -220,6 +222,7 @@ export async function importRepoStory(
     pushedAt: meta.pushed_at,
     featureCount: features.length,
     releasePublishedAt,
+    name: meta.name,
   });
 
   const periodLabel = buildPeriodLabel({
@@ -362,16 +365,4 @@ async function fetchPackageJson(owner: string, repo: string, token: string) {
   } catch {
     return "";
   }
-}
-
-function uniqueItems<T extends { text: string }>(items: T[]): T[] {
-  const seen = new Set<string>();
-  const out: T[] = [];
-  for (const item of items) {
-    const key = item.text.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(item);
-  }
-  return out;
 }

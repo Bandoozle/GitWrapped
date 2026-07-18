@@ -63,10 +63,12 @@ Connect the GitHub repo in [Vercel](https://vercel.com/new) → Framework: Next.
 
 Use a **separate** OAuth App from local, or keep local as a second app — GitHub only allows one callback URL per app.
 
-### 3. Add a Vercel Blob store
+### 3. Add a Vercel Blob store (required for live links)
 
 In the Vercel project → **Storage** → create **Blob** → connect it to the project.  
-This sets `BLOB_READ_WRITE_TOKEN` so live links survive deploys and work for every visitor.
+This sets `BLOB_READ_WRITE_TOKEN`. Without it, share links fail on Vercel (the local `.data/shares/` folder only works on your machine).
+
+Confirm the env var exists under **Settings → Environment Variables** for Production, then **Redeploy**.
 
 ### 4. Environment variables on Vercel
 

@@ -451,6 +451,46 @@ function NewStoryInner() {
           >
             <div className="space-y-10">
               <section className="space-y-3">
+                <h3 className="font-display text-xl tracking-tight">Template</h3>
+                <p className="text-sm text-muted">
+                  Switch the look anytime — the live preview updates immediately.
+                </p>
+                <div
+                  className="grid gap-2 sm:grid-cols-3"
+                  role="radiogroup"
+                  aria-label="Carousel template"
+                >
+                  {TEMPLATES.map((template) => {
+                    const selected = story.template === template.id;
+                    return (
+                      <button
+                        key={template.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() =>
+                          setStory({ ...story, template: template.id as TemplateId })
+                        }
+                        className={cn(
+                          "rounded-xl border px-3.5 py-3 text-left transition-colors duration-150",
+                          selected
+                            ? "border-accent bg-accent/10 text-foreground"
+                            : "border-border bg-surface text-muted hover:border-white/25 hover:text-foreground",
+                        )}
+                      >
+                        <span className="block text-sm font-medium text-foreground">
+                          {template.name}
+                        </span>
+                        <span className="mt-1 block text-xs leading-snug text-muted">
+                          {template.tagline}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="space-y-3">
                 <h3 className="font-display text-xl tracking-tight">1 · Project Snapshot</h3>
                 <p className="text-sm text-muted">
                   What is this, why does it exist, and can I see it?

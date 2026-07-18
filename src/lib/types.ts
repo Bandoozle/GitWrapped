@@ -127,8 +127,8 @@ export const TEMPLATES: {
   tagline: string;
 }[] = [
   { id: "minimal", name: "Minimal", tagline: "Light canvas. Editorial rules. LinkedIn-clean." },
-  { id: "dark", name: "Dark", tagline: "Soft aurora. Night mode focus." },
-  { id: "gradient", name: "Gradient", tagline: "Centered drama. Soft bloom energy." },
+  { id: "dark", name: "Dark", tagline: "Flat black canvas. Soft single-color glow." },
+  { id: "gradient", name: "Gradient", tagline: "Purple–teal mesh. Dual neon blooms." },
 ];
 
 export const ACTIVITY_LABELS: Record<ActivityStatus, string> = {

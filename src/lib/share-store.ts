@@ -14,8 +14,12 @@ export type SharedStory = {
 
 const DATA_DIR = path.join(process.cwd(), ".data", "shares");
 
-function useBlobStore() {
+export function isBlobConfigured() {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+}
+
+function isVercel() {
+  return process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV);
 }
 
 function blobPath(id: string) {
@@ -28,6 +32,35 @@ function fileFor(id: string) {
 
 async function ensureDir() {
   await fs.mkdir(DATA_DIR, { recursive: true });
+}
+
+/** Persist a data-URL screenshot to Blob so share JSON stays small. */
+async function persistProofImage(
+  shareId: string,
+  proofImage: string | null | undefined,
+): Promise<string | null> {
+  if (!proofImage) return null;
+  if (!proofImage.startsWith("data:image/")) return proofImage;
+  if (!isBlobConfigured()) {
+    throw new Error(
+      "Live links need Vercel Blob when screenshots are uploaded. Add BLOB_READ_WRITE_TOKEN in Vercel, or use an image URL instead of uploading a file.",
+    );
+  }
+
+  const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,([\s\S]+)$/.exec(proofImage);
+  if (!match) return proofImage;
+
+  const contentType = match[1]!;
+  const buffer = Buffer.from(match[2]!, "base64");
+  const ext = contentType.split("/")[1]?.replace("jpeg", "jpg") || "png";
+  const blob = await put(`shares/${shareId}/proof.${ext}`, buffer, {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType,
+    token: process.env.BLOB_READ_WRITE_TOKEN,
+  });
+  return blob.url;
 }
 
 async function saveToBlob(record: SharedStory) {
@@ -73,21 +106,33 @@ export async function saveSharedStory(
   story: ProjectStory,
   options?: { id?: string; ownerLogin?: string },
 ): Promise<SharedStory> {
+  if (!isBlobConfigured() && isVercel()) {
+    throw new Error(
+      "Live share links need Vercel Blob. In your Vercel project: Storage → Create Blob → connect it, then redeploy.",
+    );
+  }
+
   const id = options?.id ?? nanoid(10);
   const existing = await getSharedStory(id);
+  const proofImage = await persistProofImage(id, story.carousel.proofImage);
+
   const record: SharedStory = {
     id,
     story: {
       ...story,
       status: "generated",
       updatedAt: new Date().toISOString(),
+      carousel: {
+        ...story.carousel,
+        proofImage,
+      },
     },
     createdAt: existing?.createdAt ?? new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     ownerLogin: options?.ownerLogin ?? existing?.ownerLogin,
   };
 
-  if (useBlobStore()) {
+  if (isBlobConfigured()) {
     await saveToBlob(record);
   } else {
     await saveToFs(record);
@@ -96,8 +141,9 @@ export async function saveSharedStory(
 }
 
 export async function getSharedStory(id: string): Promise<SharedStory | null> {
-  if (useBlobStore()) {
+  if (isBlobConfigured()) {
     return getFromBlob(id);
   }
+  if (isVercel()) return null;
   return getFromFs(id);
 }
